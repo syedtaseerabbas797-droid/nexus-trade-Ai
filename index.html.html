@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS.TRADE | AI Crypto Terminal</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CDNs -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* ==========================================================================
+           CSS VARIABLES & RESET
+           ========================================================================== */
+        :root {
+            --bg: #0a0e17;
+            --card-bg: #111827;
+            --border: #1e2d45;
+            --cyan: #00e5ff;
+            --purple: #7c3aed;
+            --green: #00c853;
+            --red: #ff3d57;
+            --yellow: #ffb300;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --font-ui: 'Syne', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+            --transition: all 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 { font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .mono { font-family: var(--font-mono); }
+        .text-cyan { color: var(--cyan); }
+        .text-green { color: var(--green); }
+        .text-red { color: var(--red); }
+        .text-purple { color: var(--purple); }
+        .text-yellow { color: var(--yellow); }
+        .text-muted { color: var(--text-muted); }
+
+        /* Utilities */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .flex { display: flex; }
+        .flex-col { display: flex; flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .gap-2 { gap: 8px; }
+        .gap-4 { gap: 16px; }
+        .grid { display: grid; }
+        
+        button {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-main); font-family: var(--font-ui);
+            padding: 8px 16px; border-radius: 4px; cursor: pointer;
+            transition: var(--transition); font-weight: 600; text-transform: uppercase;
+        }
+        button:hover { background: var(--border); }
+        select, input {
+            background: var(--bg); border: 1px solid var(--border);
+            color: var(--text-main); font-family: var(--font-mono);
+            padding: 8px; border-radius: 4px; outline: none;
+        }
+
+        /* Layout */
+        #app { padding: 16px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+        .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+        
+        /* ==========================================================================
+           SECTION 1 - HEADER
+           ========================================================================== */
+        header { border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+        .logo { font-size: 24px; font-weight: 700; text-shadow: 0 0 10px rgba(0,229,255,0.4); }
+        .live-indicator { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+        .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
+        .header-stats { font-size: 12px; color: var(--text-muted); }
+        .icon-btn { padding: 8px; border: none; background: transparent; color: var(--text-muted); }
+        .icon-btn:hover { color: var(--cyan); transform: rotate(90deg); }
+
+        /* ==========================================================================
+           SECTION 2 - LIVE TICKER
+           ========================================================================== */
+        .ticker-wrap { width: 100%; overflow: hidden; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; padding: 8px 16px; gap: 24px; }
+        .ticker-item { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 14px; white-space: nowrap; cursor: pointer; transition: var(--transition); }
+        .ticker-item:hover { color: var(--cyan); }
+        .ticker-item img { width: 20px; height: 20px; border-radius: 50%; }
+        .flash-update { animation: flash 0.5s; }
+
+        /* ==========================================================================
+           SECTION 3 & 4 - METRICS & CONTROLS
+           ========================================================================== */
+        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .metric-value { font-size: 28px; font-weight: 700; margin-top: 8px; }
+        
+        .controls-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: var(--card-bg); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); }
+        .btn-group { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+        .btn-group button { border: none; border-radius: 0; border-right: 1px solid var(--border); }
+        .btn-group button:last-child { border-right: none; }
+        .btn-group button.active { background: var(--cyan); color: var(--bg); font-weight: 800; }
+        
+        .run-btn { background: linear-gradient(45deg, var(--purple), #581c87); border: none; color: white; padding: 12px 24px; font-size: 16px; font-weight: 800; box-shadow: 0 0 15px rgba(124, 58, 237, 0.4); animation: glow-pulse 2s infinite; display: flex; align-items: center; gap: 8px; }
+        .run-btn:hover { transform: scale(1.02); box-shadow: 0 0 25px rgba(124, 58, 237, 0.6); }
+        .run-btn:disabled { opacity: 0.5; cursor: not-allowed; animation: none; box-shadow: none; }
+
+        /* ==========================================================================
+           SECTION 5 & 6 - CHART & INDICATORS
+           ========================================================================== */
+        .chart-container { height: 400px; width: 100%; position: relative; }
+        .chart-tools { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+        
+        .indicators-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+        .ind-card { text-align: center; padding: 12px; border: 1px solid var(--border); border-radius: 4px; background: rgba(17, 24, 39, 0.5); }
+        .ind-val { font-family: var(--font-mono); font-size: 18px; margin-top: 4px; }
+
+        /* ==========================================================================
+           SECTION 7 - FEAR & GREED
+           ========================================================================== */
+        .gauge-container { position: relative; width: 200px; height: 100px; margin: 0 auto; overflow: hidden; }
+        .gauge-bg { width: 200px; height: 200px; border-radius: 50%; border: 20px solid var(--border); position: absolute; top: 0; left: 0; }
+        .gauge-fill { width: 200px; height: 200px; border-radius: 50%; border: 20px solid var(--yellow); position: absolute; top: 0; left: 0; clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%); transform: rotate(45deg); transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1); border-bottom-color: transparent; border-right-color: transparent; }
+        .gauge-center { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); text-align: center; }
+        .gauge-val { font-size: 32px; font-weight: 700; font-family: var(--font-mono); }
+
+        /* ==========================================================================
+           SECTION 8 - AI AGENT PANEL
+           ========================================================================== */
+        .ai-panel { border: 1px solid var(--purple); box-shadow: 0 0 20px rgba(124, 58, 237, 0.1); display: flex; flex-direction: column; height: 100%; }
+        .ai-header { background: rgba(124, 58, 237, 0.1); padding: 12px; border-bottom: 1px solid var(--purple); display: flex; align-items: center; justify-content: space-between; }
+        .ai-badge { font-size: 10px; background: var(--purple); padding: 2px 6px; border-radius: 12px; font-family: var(--font-mono); }
+        
+        .ai-content { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+        .decision-badge { font-size: 32px; font-weight: 800; text-align: center; padding: 16px; border-radius: 8px; letter-spacing: 2px; text-transform: uppercase; border: 2px solid; }
+        .dec-buy { color: var(--green); border-color: var(--green); background: rgba(0, 200, 83, 0.1); box-shadow: 0 0 15px rgba(0,200,83,0.3); }
+        .dec-sell { color: var(--red); border-color: var(--red); background: rgba(255, 61, 87, 0.1); box-shadow: 0 0 15px rgba(255,61,87,0.3); }
+        .dec-hold { color: var(--yellow); border-color: var(--yellow); background: rgba(255, 179, 0, 0.1); box-shadow: 0 0 15px rgba(255,179,0,0.3); }
+        .bounce-anim { animation: bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        .ai-terminal { background: #000; border: 1px solid #333; padding: 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 13px; color: var(--green); white-space: pre-wrap; height: 150px; overflow-y: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+        .progress-bar { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+        .progress-fill { height: 100%; background: var(--cyan); width: 0%; transition: width 1s ease; }
+
+        /* ==========================================================================
+           SECTION 10 - PAPER TRADING
+           ========================================================================== */
+        .paper-trade { border: 1px dashed var(--text-muted); }
+        .pt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+        .pt-val { font-family: var(--font-mono); font-size: 16px; color: var(--cyan); }
+
+        /* ==========================================================================
+           SECTION 11 & 9 - EXPORT & HISTORY
+           ========================================================================== */
+        .export-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .export-bar button { font-size: 12px; padding: 6px 12px; display: flex; align-items: center; gap: 4px; }
+        
+        .history-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 12px; }
+        .history-table th, .history-table td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); }
+        .history-table th { color: var(--text-muted); font-family: var(--font-ui); text-transform: uppercase; }
+
+        /* ==========================================================================
+           SECTION 12 - SETTINGS DRAWER
+           ========================================================================== */
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); z-index: 99; display: none; opacity: 0; transition: var(--transition); }
+        .drawer { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: var(--card-bg); border-left: 1px solid var(--border); z-index: 100; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); padding: 24px; display: flex; flex-direction: column; gap: 24px; box-shadow: -5px 0 25px rgba(0,0,0,0.5); }
+        .drawer.open { right: 0; }
+        .overlay.open { display: block; opacity: 1; }
+        .drawer-row { display: flex; flex-direction: column; gap: 8px; }
+        .drawer-row label { font-size: 12px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+
+        /* Loader */
+        .loader { border: 3px solid rgba(0,229,255,0.1); border-top: 3px solid var(--cyan); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: none; margin: 0 auto; }
+
+        /* ==========================================================================
+           ANIMATIONS & RESPONSIVE
+           ========================================================================== */
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(0, 200, 83, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); } }
+        @keyframes glow-pulse { 0% { box-shadow: 0 0 10px rgba(124, 58, 237, 0.4); } 50% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.8); } 100% { box-shadow: 0 0 10px rgba(124, 58, 237, 0.4); } }
+        @keyframes flash { 0% { background-color: var(--card-bg); } 50% { background-color: rgba(0, 229, 255, 0.2); } 100% { background-color: var(--card-bg); } }
+        @keyframes bounce { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .stagger-1 { animation: slideUp 0.6s ease forwards; }
+        .stagger-2 { animation: slideUp 0.6s ease 0.15s forwards; opacity: 0; }
+        .stagger-3 { animation: slideUp 0.6s ease 0.3s forwards; opacity: 0; }
+        .stagger-4 { animation: slideUp 0.6s ease 0.45s forwards; opacity: 0; }
+
+        /* Toasts */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: var(--card-bg); border: 1px solid var(--border); padding: 12px 24px; border-radius: 4px; font-family: var(--font-mono); font-size: 14px; animation: slideUp 0.3s ease; }
+
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .metrics-grid { grid-template-columns: 1fr; }
+            .controls-row { flex-direction: column; align-items: stretch; }
+            .btn-group { flex-wrap: wrap; }
+            .indicators-grid { grid-template-columns: 1fr 1fr; }
+            .ticker-wrap { overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SETTINGS DRAWER OVERLAY -->
+    <div class="overlay" id="overlay"></div>
+    <div class="drawer" id="settings-drawer">
+        <div class="flex justify-between items-center">
+            <h3>Terminal Settings</h3>
+            <button class="icon-btn" onclick="UI.toggleSettings()" style="transform: none;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="drawer-row">
+            <label>Claude API Key (Anthropic)</label>
+            <input type="password" id="api-key-input" placeholder="sk-ant-api03-...">
+            <small class="text-muted">Stored locally in your browser.</small>
+        </div>
+        <div class="drawer-row">
+            <label>Auto-Refresh Interval</label>
+            <select id="refresh-input">
+                <option value="15000">15 Seconds</option>
+                <option value="30000">30 Seconds</option>
+                <option value="60000">60 Seconds</option>
+                <option value="0">Manual Only</option>
+            </select>
+        </div>
+        <div class="drawer-row flex justify-between items-center">
+            <label>Terminal Sounds</label>
+            <input type="checkbox" id="sound-input" checked style="width:20px;height:20px;">
+        </div>
+        <div style="flex:1;"></div>
+        <button onclick="STATE.saveSettings()" class="btn-group active" style="width:100%; background:var(--cyan); color:var(--bg);">SAVE SETTINGS</button>
+        <button onclick="STATE.resetPortfolio()" style="border-color:var(--red); color:var(--red);">RESET PORTFOLIO</button>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toast-container"></div>
+
+    <div id="app">
+        <!-- HEADER -->
+        <header class="flex justify-between items-center stagger-1">
+            <div class="flex items-center gap-4">
+                <div class="logo mono text-cyan">NEXUS.TRADE</div>
+                <div class="live-indicator"><div class="dot"></div> LIVE MARKET</div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="header-stats mono text-right" id="session-stats">
+                    Session: 0m | Refreshes: 0 | AI Runs: 0
+                </div>
+                <div class="mono" style="font-size:18px; font-weight:700;" id="live-clock">00:00:00</div>
+                <button class="icon-btn" onclick="UI.toggleSound()"><i data-lucide="volume-2" id="sound-icon"></i></button>
+                <button class="icon-btn" onclick="UI.toggleSettings()"><i data-lucide="settings"></i></button>
+            </div>
+        </header>
+
+        <!-- LIVE TICKER -->
+        <div class="ticker-wrap stagger-1" id="ticker-bar">
+            <!-- Populated via JS -->
+            <div class="text-muted mono text-sm">Loading market data...</div>
+        </div>
+
+        <div class="main-grid">
+            <!-- LEFT COLUMN -->
+            <div class="flex-col gap-4 stagger-2" style="display:flex;">
+                
+                <!-- CONTROLS -->
+                <div class="controls-row">
+                    <select id="coin-select" style="font-size:16px; font-weight:700; border-color:var(--cyan);">
+                        <option value="bitcoin">Bitcoin (BTC)</option>
+                        <option value="ethereum">Ethereum (ETH)</option>
+                        <option value="solana">Solana (SOL)</option>
+                        <option value="binancecoin">Binance Coin (BNB)</option>
+                        <option value="cardano">Cardano (ADA)</option>
+                        <option value="ripple">Ripple (XRP)</option>
+                    </select>
+                    
+                    <div class="btn-group" id="tf-btns">
+                        <button class="tf-btn" data-tf="1">1D</button>
+                        <button class="tf-btn active" data-tf="7">7D</button>
+                        <button class="tf-btn" data-tf="30">30D</button>
+                        <button class="tf-btn" data-tf="90">90D</button>
+                    </div>
+
+                    <div style="flex:1;"></div>
+                    
+                    <button class="run-btn" id="run-ai-btn" onclick="AI.runAnalysis()">
+                        <i data-lucide="cpu"></i> RUN AI AGENT (R)
+                    </button>
+                </div>
+
+                <!-- METRICS -->
+                <div class="metrics-grid">
+                    <div class="card">
+                        <div class="text-muted text-sm uppercase">Current Price</div>
+                        <div class="metric-value text-cyan mono" id="metric-price">$0.00</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-muted text-sm uppercase">24h Change</div>
+                        <div class="metric-value mono" id="metric-change">0.00%</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-muted text-sm uppercase">Market Cap</div>
+                        <div class="metric-value mono" id="metric-mcap">$0.00B</div>
+                    </div>
+                </div>
+
+                <!-- CHART -->
+                <div class="card">
+                    <div class="chart-tools">
+                        <div class="text-muted mono" id="chart-title">BTC/USD - 7D</div>
+                        <div class="btn-group" style="transform: scale(0.8); transform-origin: right;">
+                            <button class="chart-type-btn active" data-type="line">LINE</button>
+                            <button class="chart-type-btn" data-type="bar">CANDLE (Sim)</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- TECHNICAL INDICATORS -->
+                <div class="card">
+                    <h4 class="text-muted mb-2">Technical Analysis (Internal)</h4>
+                    <div class="indicators-grid">
+                        <div class="ind-card">
+                            <div class="text-muted" style="font-size:10px;">SMA (7 Period)</div>
+                            <div class="ind-val text-cyan" id="ind-sma">$0</div>
+                        </div>
+                        <div class="ind-card">
+                            <div class="text-muted" style="font-size:10px;">Momentum</div>
+                            <div class="ind-val" id="ind-mom">0%</div>
+                        </div>
+                        <div class="ind-card">
+                            <div class="text-muted" style="font-size:10px;">Volatility</div>
+                            <div class="ind-val" id="ind-vol">-</div>
+                        </div>
+                        <div class="ind-card">
+                            <div class="text-muted" style="font-size:10px;">Short Trend</div>
+                            <div class="ind-val" id="ind-trend">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="flex-col gap-4 stagger-3" style="display:flex;">
+                
+                <!-- EXPORT TOOLBAR -->
+                <div class="export-bar">
+                    <button onclick="UTILS.copyAnalysis()"><i data-lucide="copy" size="14"></i> Copy</button>
+                    <button onclick="UTILS.screenshot()"><i data-lucide="camera" size="14"></i> Screen</button>
+                    <button onclick="UTILS.exportCSV()"><i data-lucide="download" size="14"></i> CSV</button>
+                </div>
+
+                <!-- AI AGENT PANEL -->
+                <div class="card ai-panel">
+                    <div class="ai-header">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="bot" class="text-purple"></i>
+                            <h4 style="margin:0;">AI AGENT</h4>
+                        </div>
+                        <div class="ai-badge">CLAUDE 3.5 SONNET</div>
+                    </div>
+                    <div class="ai-content">
+                        
+                        <!-- Initial State -->
+                        <div id="ai-idle" class="flex-col items-center justify-center text-muted" style="height:100%; text-align:center; gap:16px;">
+                            <i data-lucide="brain-circuit" size="48" style="opacity:0.2;"></i>
+                            <p>Awaiting market data input.<br>Press "RUN AI AGENT" to begin synthesis.</p>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="ai-loading" class="flex-col items-center justify-center text-cyan" style="height:100%; display:none; gap:16px;">
+                            <div class="loader" style="display:block;"></div>
+                            <p class="mono text-sm">Analyzing market conditions...</p>
+                        </div>
+
+                        <!-- Result State -->
+                        <div id="ai-result" style="display:none; flex-direction:column; gap:16px;">
+                            <div class="decision-badge dec-hold" id="ai-decision">HOLD</div>
+                            
+                            <div>
+                                <div class="flex justify-between text-sm text-muted mono mb-1">
+                                    <span>Confidence Level</span>
+                                    <span id="ai-conf-text" class="text-cyan">0%</span>
+                                </div>
+                                <div class="progress-bar"><div class="progress-fill" id="ai-conf-bar"></div></div>
+                            </div>
+
+                            <div class="grid" style="grid-template-columns:1fr 1fr; gap:8px;">
+                                <div class="card" style="padding:8px;"><span class="text-muted text-xs block">TARGET</span><span class="mono text-green text-sm" id="ai-target">$0</span></div>
+                                <div class="card" style="padding:8px;"><span class="text-muted text-xs block">STOP LOSS</span><span class="mono text-red text-sm" id="ai-stop">$0</span></div>
+                            </div>
+                            
+                            <div class="ai-terminal" id="ai-reasoning">
+                                > Awaiting transmission...
+                            </div>
+                            
+                            <div class="text-sm">
+                                <span class="text-muted block mb-1">Key Factors:</span>
+                                <ul style="padding-left: 20px; color: var(--text-main);" id="ai-factors">
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- FEAR & GREED -->
+                <div class="card">
+                    <h4 class="text-muted text-center mb-4">Market Sentiment</h4>
+                    <div class="gauge-container">
+                        <div class="gauge-bg"></div>
+                        <div class="gauge-fill" id="fg-gauge"></div>
+                        <div class="gauge-center">
+                            <div class="gauge-val" id="fg-val">--</div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2 font-bold" id="fg-label" style="text-transform:uppercase;">Loading</div>
+                </div>
+
+                <!-- PAPER TRADING -->
+                <div class="card paper-trade">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="text-yellow flex items-center gap-2"><i data-lucide="wallet" size="16"></i> Simulator</h4>
+                        <span class="mono text-sm text-muted">Virtual USD</span>
+                    </div>
+                    <div class="pt-grid">
+                        <div>
+                            <div class="text-muted text-xs">Balance (USD)</div>
+                            <div class="pt-val" id="pt-usd">$10,000.00</div>
+                        </div>
+                        <div>
+                            <div class="text-muted text-xs">Holdings (<span id="pt-coin-lbl">BTC</span>)</div>
+                            <div class="pt-val text-main" id="pt-coin">0.0000</div>
+                        </div>
+                        <div>
+                            <div class="text-muted text-xs">Total Value</div>
+                            <div class="pt-val" id="pt-total">$10,000.00</div>
+                        </div>
+                        <div>
+                            <div class="text-muted text-xs">Profit/Loss</div>
+                            <div class="pt-val text-green" id="pt-pnl">+$0.00</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-4" id="pt-actions" style="display:none;">
+                        <button style="flex:1; background:var(--green); color:var(--bg); border:none;" onclick="TRADE.execute('BUY')">EXECUTE BUY</button>
+                        <button style="flex:1; background:var(--red); color:var(--bg); border:none;" onclick="TRADE.execute('SELL')">EXECUTE SELL</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- HISTORY LOG -->
+        <div class="card stagger-4 mt-4">
+            <div class="flex justify-between items-center mb-4">
+                <h4>AI Decision History</h4>
+                <button class="text-xs" onclick="STATE.clearHistory()">Clear History</button>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Asset</th>
+                            <th>Price</th>
+                            <th>Decision</th>
+                            <th>Target / Stop</th>
+                            <th>Summary Reasoning</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr><td colspan="6" class="text-center text-muted">No history available. Run the AI Agent.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Constants & Configuration
+        const COINS = {
+            bitcoin: { sym: 'BTC', img: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png' },
+            ethereum: { sym: 'ETH', img: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
+            solana: { sym: 'SOL', img: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' },
+            binancecoin: { sym: 'BNB', img: 'https://assets.coingecko.com/coins/images/825/small/binance-coin-logo.png' },
+            cardano: { sym: 'ADA', img: 'https://assets.coingecko.com/coins/images/975/small/cardano.png' },
+            ripple: { sym: 'XRP', img: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png' }
+        };
+
+        // Application State
+        const STATE = {
+            apiKey: localStorage.getItem('nexus_apikey') || '',
+            coin: 'bitcoin',
+            tf: 7,
+            chartType: 'line',
+            refreshInterval: parseInt(localStorage.getItem('nexus_refresh')) || 30000,
+            sound: localStorage.getItem('nexus_sound') !== 'false',
+            
+            marketData: { currentPrice: 0, change24: 0, mcap: 0, history: [], volume: [] },
+            fng: { value: 50, label: 'Neutral' },
+            indicators: { sma: 0, mom: 0, vol: 'Low', trend: 'Neutral' },
+            
+            session: { startTime: Date.now(), refreshes: 0, aiRuns: parseInt(localStorage.getItem('nexus_ai_runs')) || 0 },
+            historyLog: JSON.parse(localStorage.getItem('nexus_history')) || [],
+            portfolio: JSON.parse(localStorage.getItem('nexus_portfolio')) || { usd: 10000, holdings: {} },
+            
+            chartInstance: null,
+            timer: null,
+
+            saveSettings: () => {
+                const key = document.getElementById('api-key-input').value;
+                if(key) localStorage.setItem('nexus_apikey', key);
+                STATE.apiKey = key || STATE.apiKey;
+                
+                STATE.refreshInterval = parseInt(document.getElementById('refresh-input').value);
+                localStorage.setItem('nexus_refresh', STATE.refreshInterval);
+                
+                STATE.sound = document.getElementById('sound-input').checked;
+                localStorage.setItem('nexus_sound', STATE.sound);
+                
+                UI.toggleSettings();
+                UTILS.toast('Settings saved successfully.', 'success');
+                DATA.startLoop();
+            },
+
+            clearHistory: () => {
+                STATE.historyLog = [];
+                localStorage.setItem('nexus_history', JSON.stringify([]));
+                UI.renderHistory();
+                UTILS.toast('History cleared.');
+            },
+
+            resetPortfolio: () => {
+                STATE.portfolio = { usd: 10000, holdings: {} };
+                localStorage.setItem('nexus_portfolio', JSON.stringify(STATE.portfolio));
+                UI.renderPaperTrading();
+                UTILS.toast('Portfolio reset to $10,000.');
+            }
+        };
+
+        // Utility Functions
+        const UTILS = {
+            formatCurrency: (num, dec=2) => {
+                if(num === undefined || num === null) return '$0.00';
+                return '$' + num.toLocaleString('en-US', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+            },
+            formatCompact: (num) => {
+                if(num >= 1e12) return '$' + (num/1e12).toFixed(2) + 'T';
+                if(num >= 1e9) return '$' + (num/1e9).toFixed(2) + 'B';
+                if(num >= 1e6) return '$' + (num/1e6).toFixed(2) + 'M';
+                return '$' + num.toLocaleString();
+            },
+            animateValue: (obj, start, end, duration, formatFn) => {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    const current = start + progress * (end - start);
+                    obj.innerText = formatFn ? formatFn(current) : current.toFixed(2);
+                    if (progress < 1) window.requestAnimationFrame(step);
+                };
+                window.requestAnimationFrame(step);
+            },
+            toast: (msg, type='info') => {
+                const c = document.getElementById('toast-container');
+                const t = document.createElement('div');
+                t.className = `toast ${type === 'error' ? 'text-red' : 'text-cyan'}`;
+                t.style.borderColor = type === 'error' ? 'var(--red)' : 'var(--cyan)';
+                t.innerText = msg;
+                c.appendChild(t);
+                setTimeout(() => { t.style.opacity = '0'; setTimeout(()=>t.remove(), 300); }, 3000);
+            },
+            playSound: (type) => {
+                if(!STATE.sound) return;
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    
+                    if(type === 'BUY') { // Rising arpeggio
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(400, ctx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.3);
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                        osc.start(); osc.stop(ctx.currentTime + 0.3);
+                    } else if(type === 'SELL') { // Falling tone
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(600, ctx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.4);
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                        osc.start(); osc.stop(ctx.currentTime + 0.4);
+                    } else if(type === 'BEEP') { // UI click
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(800, ctx.currentTime);
+                        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                        osc.start(); osc.stop(ctx.currentTime + 0.1);
+                    }
+                } catch(e) { console.log('Audio error', e); }
+            },
+            copyAnalysis: () => {
+                const el = document.getElementById('ai-reasoning');
+                if(!el || el.innerText.includes('Awaiting')) return UTILS.toast('No analysis to copy.', 'error');
+                navigator.clipboard.writeText(el.innerText).then(() => UTILS.toast('Analysis copied to clipboard!'));
+            },
+            screenshot: () => {
+                UTILS.toast('Generating screenshot...');
+                html2canvas(document.body, { backgroundColor: '#0a0e17' }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `NexusTrade_${COINS[STATE.coin].sym}_${Date.now()}.png`;
+                    link.href = canvas.toDataURL();
+                    link.click();
+                });
+            },
+            exportCSV: () => {
+                if(!STATE.marketData.history.length) return UTILS.toast('No data to export.', 'error');
+                let csv = "Date,Price\n";
+                STATE.marketData.history.forEach(d => {
+                    csv += `${new Date(d.x).toISOString()},${d.y}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `${COINS[STATE.coin].sym}_history.csv`; a.click();
+                window.URL.revokeObjectURL(url);
+            }
+        };
+
+        // Data Fetching layer
+        const DATA = {
+            fetchTicker: async () => {
+                try {
+                    const ids = Object.keys(COINS).join(',');
+                    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`);
+                    const data = await res.json();
+                    
+                    // Update specific coin state
+                    const d = data[STATE.coin];
+                    const oldPrice = STATE.marketData.currentPrice;
+                    STATE.marketData.currentPrice = d.usd;
+                    STATE.marketData.change24 = d.usd_24h_change;
+                    STATE.marketData.mcap = d.usd_market_cap;
+                    
+                    UI.renderTicker(data);
+                    UI.renderMetrics(oldPrice);
+                    UI.renderPaperTrading();
+                    STATE.session.refreshes++;
+                } catch(err) {
+                    console.error("CoinGecko API Error:", err);
+                    UTILS.toast('Ticker update failed. Rate limited?', 'error');
+                }
+            },
+            fetchHistory: async () => {
+                try {
+                    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${STATE.coin}/market_chart?vs_currency=usd&days=${STATE.tf}`);
+                    const data = await res.json();
+                    STATE.marketData.history = data.prices.map(p => ({x: p[0], y: p[1]}));
+                    STATE.marketData.volume = data.total_volumes.map(v => ({x: v[0], y: v[1]}));
+                    DATA.calculateIndicators();
+                    CHART.render();
+                    UI.renderIndicators();
+                } catch(err) {
+                    UTILS.toast('Historical data error.', 'error');
+                }
+            },
+            fetchFNG: async () => {
+                try {
+                    const res = await fetch('https://api.alternative.me/fng/?limit=1');
+                    const data = await res.json();
+                    STATE.fng.value = parseInt(data.data[0].value);
+                    STATE.fng.label = data.data[0].value_classification;
+                    UI.renderFNG();
+                } catch(e) { console.log('FNG Error'); }
+            },
+            calculateIndicators: () => {
+                const prices = STATE.marketData.history.map(d=>d.y);
+                if(prices.length < 7) return;
+                
+                // SMA 7 (based on data points, assuming 1 day resolution or nearest)
+                // If tf is 1D, points are hourly (24). 7 points = 7 hours.
+                // Better approach: average last 7% of data array.
+                const sliceLen = Math.max(7, Math.floor(prices.length * 0.1));
+                const lastN = prices.slice(-sliceLen);
+                STATE.indicators.sma = lastN.reduce((a,b)=>a+b,0) / sliceLen;
+                
+                const current = prices[prices.length-1];
+                const past = prices[0];
+                STATE.indicators.mom = ((current - past) / past) * 100;
+                
+                // Volatility approx
+                const mean = prices.reduce((a,b)=>a+b,0)/prices.length;
+                const stdDev = Math.sqrt(prices.map(x => Math.pow(x - mean, 2)).reduce((a,b)=>a+b)/prices.length);
+                const volPct = (stdDev / mean) * 100;
+                STATE.indicators.vol = volPct < 3 ? 'Low' : (volPct < 8 ? 'Med' : 'High');
+                
+                STATE.indicators.trend = current > STATE.indicators.sma ? 'BULLISH' : 'BEARISH';
+            },
+            startLoop: () => {
+                if(STATE.timer) clearInterval(STATE.timer);
+                DATA.fetchTicker();
+                DATA.fetchHistory();
+                if(STATE.refreshInterval > 0) {
+                    STATE.timer = setInterval(DATA.fetchTicker, STATE.refreshInterval);
+                }
+            }
+        };
+
+        // Chart.js Manager
+        const CHART = {
+            render: () => {
+                const ctx = document.getElementById('mainChart').getContext('2d');
+                if(STATE.chartInstance) STATE.chartInstance.destroy();
+
+                const hist = STATE.marketData.history;
+                if(!hist.length) return;
+
+                const minPrice = Math.min(...hist.map(d=>d.y));
+                const maxPrice = Math.max(...hist.map(d=>d.y));
+
+                // Gradient
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, 'rgba(0, 229, 255, 0.4)');
+                gradient.addColorStop(1, 'rgba(0, 229, 255, 0.0)');
+
+                let config = {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Price',
+                            data: hist,
+                            borderColor: '#00e5ff',
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            fill: true,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            tension: 0.1,
+                            yAxisID: 'y'
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { display: false }, tooltip: {
+                            backgroundColor: 'rgba(17,24,39,0.9)', titleFont: {family: 'Space Mono'}, bodyFont: {family: 'Space Mono'},
+                            callbacks: { label: (ctx) => UTILS.formatCurrency(ctx.raw.y, 2) }
+                        }},
+                        scales: {
+                            x: { type: 'category', labels: hist.map(d=> new Date(d.x).toLocaleDateString()), ticks: { maxTicksLimit: 7, color: '#94a3b8' }, grid: {display:false} },
+                            y: { type: 'linear', position: 'right', ticks: { color: '#94a3b8', callback: (val)=>'$'+val }, grid: { color: '#1e2d45' } }
+                        },
+                        animation: { duration: 1200, easing: 'easeOutQuart' }
+                    }
+                };
+
+                // Pseudo-Candle / Bar chart simulation if requested
+                if(STATE.chartType === 'bar') {
+                    config.type = 'bar';
+                    config.data.datasets[0].backgroundColor = hist.map((d,i) => {
+                        if(i===0) return '#00c853';
+                        return d.y >= hist[i-1].y ? '#00c853' : '#ff3d57';
+                    });
+                    config.data.datasets[0].fill = false;
+                }
+
+                STATE.chartInstance = new Chart(ctx, config);
+                document.getElementById('chart-title').innerText = `${COINS[STATE.coin].sym}/USD - ${STATE.tf}D`;
+            }
+        };
+
+        // Claude AI Integration
+        const AI = {
+            runAnalysis: async () => {
+                if(!STATE.apiKey) {
+                    UTILS.toast('Please set Anthropic API Key in Settings.', 'error');
+                    UI.toggleSettings();
+                    return;
+                }
+
+                const btn = document.getElementById('run-ai-btn');
+                btn.disabled = true;
+                document.getElementById('ai-idle').style.display = 'none';
+                document.getElementById('ai-result').style.display = 'none';
+                document.getElementById('ai-loading').style.display = 'flex';
+                UTILS.playSound('BEEP');
+
+                // Prepare Prompt
+                const prompt = `You are an expert crypto trading AI agent running in a Bloomberg terminal.
+Data Snapshot:
+Coin: ${STATE.coin.toUpperCase()}
+Price: $${STATE.marketData.currentPrice}
+24h Change: ${STATE.marketData.change24.toFixed(2)}%
+Market Cap: $${(STATE.marketData.mcap/1e9).toFixed(2)}B
+Fear & Greed Index: ${STATE.fng.value} (${STATE.fng.label})
+SMA(7): $${STATE.indicators.sma.toFixed(2)}
+Volatility: ${STATE.indicators.vol}
+Trend: ${STATE.indicators.trend}
+
+Based strictly on this data, make a short term (24h-48h) trading decision.
+Respond EXACTLY in this format, no other text:
+DECISION: [BUY or SELL or HOLD]
+CONFIDENCE: [Number between 0-100]%
+REASONING: [2 concise sentences explaining the logic]
+RISK: [Low, Medium, or High]
+TARGET_PRICE: $[Price]
+STOP_LOSS: $[Price]
+FACTORS:
+- [Factor 1]
+- [Factor 2]
+- [Factor 3]`;
+
+                try {
+                    const res = await fetch('https://api.anthropic.com/v1/messages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': STATE.apiKey,
+                            'anthropic-version': '2023-06-01',
+                            'anthropic-dangerous-direct-browser-access': 'true'
+                        },
+                        body: JSON.stringify({
+                            model: "claude-3-5-sonnet-20241022",
+                            max_tokens: 500,
+                            messages: [{ role: "user", content: prompt }]
+                        })
+                    });
+
+                    if(!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error?.message || 'API Error');
+                    }
+
+                    const data = await res.json();
+                    const text = data.content[0].text;
+                    AI.parseAndRender(text);
+
+                    STATE.session.aiRuns++;
+                    localStorage.setItem('nexus_ai_runs', STATE.session.aiRuns);
+
+                } catch(error) {
+                    console.error(error);
+                    UTILS.toast(`AI Error: ${error.message}`, 'error');
+                    document.getElementById('ai-loading').style.display = 'none';
+                    document.getElementById('ai-idle').style.display = 'flex';
+                } finally {
+                    btn.disabled = false;
+                }
+            },
+
+            parseAndRender: (text) => {
+                const extract = (regex, fallback='N/A') => {
+                    const m = text.match(regex);
+                    return m ? m[1].trim() : fallback;
+                };
+
+                const decision = extract(/DECISION:\s*(BUY|SELL|HOLD)/i, 'HOLD').toUpperCase();
+                const confidence = parseInt(extract(/CONFIDENCE:\s*(\d+)/i, '50'));
+                const reasoning = extract(/REASONING:\s*(.*?)(?:\n|$RISK|$)/is, '');
+                const target = extract(/TARGET_PRICE:\s*\$?([\d,.]+)/i, '0');
+                const stop = extract(/STOP_LOSS:\s*\$?([\d,.]+)/i, '0');
+                
+                // Extract factors
+                const factorsMatch = text.match(/FACTORS:\s*([\s\S]*)/i);
+                let factorsHtml = '';
+                if(factorsMatch) {
+                    const lines = factorsMatch[1].split('\n').filter(l => l.trim().startsWith('-'));
+                    factorsHtml = lines.slice(0,3).map(l => `<li>${l.replace('-','').trim()}</li>`).join('');
+                }
+
+                // Update UI
+                document.getElementById('ai-loading').style.display = 'none';
+                document.getElementById('ai-result').style.display = 'flex';
+
+                const badge = document.getElementById('ai-decision');
+                badge.className = `decision-badge dec-${decision.toLowerCase()} bounce-anim`;
+                badge.innerText = decision;
+
+                document.getElementById('ai-conf-text').innerText = confidence + '%';
+                setTimeout(() => document.getElementById('ai-conf-bar').style.width = confidence + '%', 100);
+
+                document.getElementById('ai-reasoning').innerText = `> LOG_START\n> PARSING MARKET DATA...\n> DECISION PROTOCOL ENGAGED\n\n${reasoning}\n\n> END_LOG`;
+                document.getElementById('ai-target').innerText = `$${target}`;
+                document.getElementById('ai-stop').innerText = `$${stop}`;
+                document.getElementById('ai-factors').innerHTML = factorsHtml;
+
+                // Paper Trade Actions
+                const ptActions = document.getElementById('pt-actions');
+                ptActions.style.display = decision !== 'HOLD' ? 'flex' : 'none';
+
+                // Sound
+                UTILS.playSound(decision);
+
+                // Save to history
+                const logEntry = {
+                    time: new Date().toLocaleTimeString(),
+                    coin: COINS[STATE.coin].sym,
+                    price: STATE.marketData.currentPrice,
+                    decision: decision,
+                    ts: `T: $${target} | S: $${stop}`,
+                    reason: reasoning.substring(0, 60) + '...'
+                };
+                STATE.historyLog.unshift(logEntry);
+                if(STATE.historyLog.length > 5) STATE.historyLog.pop();
+                localStorage.setItem('nexus_history', JSON.stringify(STATE.historyLog));
+                UI.renderHistory();
+            }
+        };
+
+        // Paper Trading Simulator
+        const TRADE = {
+            execute: (action) => {
+                const sym = COINS[STATE.coin].sym;
+                const price = STATE.marketData.currentPrice;
+                let holdings = STATE.portfolio.holdings[sym] || 0;
+
+                if(action === 'BUY') {
+                    if(STATE.portfolio.usd <= 0) return UTILS.toast('Insufficient USD balance.', 'error');
+                    const amt = STATE.portfolio.usd / price;
+                    STATE.portfolio.holdings[sym] = holdings + amt;
+                    STATE.portfolio.usd = 0;
+                    UTILS.toast(`Bought ${amt.toFixed(4)} ${sym} at $${price}`, 'success');
+                } else if (action === 'SELL') {
+                    if(holdings <= 0) return UTILS.toast(`No ${sym} to sell.`, 'error');
+                    const value = holdings * price;
+                    STATE.portfolio.usd += value;
+                    STATE.portfolio.holdings[sym] = 0;
+                    UTILS.toast(`Sold ${holdings.toFixed(4)} ${sym} for $${value.toFixed(2)}`, 'success');
+                }
+                
+                localStorage.setItem('nexus_portfolio', JSON.stringify(STATE.portfolio));
+                document.getElementById('pt-actions').style.display = 'none';
+                UI.renderPaperTrading();
+                UTILS.playSound('BEEP');
+            }
+        };
+
+        // UI Rendering & Event Bindings
+        const UI = {
+            init: () => {
+                // Settings Inputs binding
+                document.getElementById('api-key-input').value = STATE.apiKey;
+                document.getElementById('refresh-input').value = STATE.refreshInterval.toString();
+                document.getElementById('sound-input').checked = STATE.sound;
+
+                // Events
+                document.getElementById('coin-select').addEventListener('change', (e) => {
+                    STATE.coin = e.target.value;
+                    DATA.startLoop();
+                    UTILS.playSound('BEEP');
+                });
+
+                document.querySelectorAll('.tf-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        STATE.tf = parseInt(e.target.dataset.tf);
+                        DATA.fetchHistory();
+                        UTILS.playSound('BEEP');
+                    });
+                });
+
+                document.querySelectorAll('.chart-type-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.chart-type-btn').forEach(b=>b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        STATE.chartType = e.target.dataset.type;
+                        CHART.render();
+                    });
+                });
+
+                // Hotkeys
+                window.addEventListener('keydown', (e) => {
+                    if(document.getElementById('overlay').classList.contains('open')) return;
+                    if(e.key.toLowerCase() === 'r') document.getElementById('run-ai-btn').click();
+                });
+
+                // Clock & Session Loop
+                setInterval(() => {
+                    document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('en-US', {hour12:false});
+                    const mins = Math.floor((Date.now() - STATE.session.startTime)/60000);
+                    document.getElementById('session-stats').innerText = `Session: ${mins}m | Refreshes: ${STATE.session.refreshes} | AI Runs: ${STATE.session.aiRuns}`;
+                }, 1000);
+
+                // Initial fetch
+                DATA.fetchFNG();
+                DATA.startLoop();
+                UI.renderHistory();
+            },
+
+            renderTicker: (data) => {
+                const wrap = document.getElementById('ticker-bar');
+                wrap.innerHTML = '';
+                wrap.classList.remove('flash-update');
+                void wrap.offsetWidth; // trigger reflow
+                wrap.classList.add('flash-update');
+
+                for(let key in COINS) {
+                    if(!data[key]) continue;
+                    const d = data[key];
+                    const changeColor = d.usd_24h_change >= 0 ? 'text-green' : 'text-red';
+                    const sign = d.usd_24h_change >= 0 ? '+' : '';
+                    
+                    const el = document.createElement('div');
+                    el.className = 'ticker-item';
+                    el.innerHTML = `
+                        <img src="${COINS[key].img}">
+                        <strong>${COINS[key].sym}</strong>
+                        <span>$${d.usd.toLocaleString()}</span>
+                        <span class="${changeColor}">${sign}${d.usd_24h_change.toFixed(2)}%</span>
+                    `;
+                    el.onclick = () => {
+                        document.getElementById('coin-select').value = key;
+                        STATE.coin = key;
+                        DATA.startLoop();
+                    };
+                    wrap.appendChild(el);
+                }
+            },
+
+            renderMetrics: (oldPrice) => {
+                UTILS.animateValue(document.getElementById('metric-price'), oldPrice, STATE.marketData.currentPrice, 800, (v)=>UTILS.formatCurrency(v));
+                
+                const cEl = document.getElementById('metric-change');
+                cEl.innerText = (STATE.marketData.change24>0?'+':'') + STATE.marketData.change24.toFixed(2) + '%';
+                cEl.className = `metric-value mono ${STATE.marketData.change24>=0?'text-green':'text-red'}`;
+                
+                document.getElementById('metric-mcap').innerText = UTILS.formatCompact(STATE.marketData.mcap);
+            },
+
+            renderIndicators: () => {
+                document.getElementById('ind-sma').innerText = UTILS.formatCurrency(STATE.indicators.sma);
+                
+                const mEl = document.getElementById('ind-mom');
+                mEl.innerText = STATE.indicators.mom.toFixed(2) + '%';
+                mEl.className = `ind-val ${STATE.indicators.mom>=0?'text-green':'text-red'}`;
+                
+                document.getElementById('ind-vol').innerText = STATE.indicators.vol;
+                
+                const tEl = document.getElementById('ind-trend');
+                tEl.innerText = STATE.indicators.trend;
+                tEl.className = `ind-val ${STATE.indicators.trend==='BULLISH'?'text-green':'text-red'}`;
+            },
+
+            renderFNG: () => {
+                document.getElementById('fg-val').innerText = STATE.fng.value;
+                document.getElementById('fg-label').innerText = STATE.fng.label;
+                
+                let color = 'var(--yellow)';
+                if(STATE.fng.value < 25) color = 'var(--red)';
+                else if(STATE.fng.value < 45) color = '#ff8f00';
+                else if(STATE.fng.value > 75) color = 'var(--green)';
+                else if(STATE.fng.value > 55) color = '#76ff03';
+                
+                const fill = document.getElementById('fg-gauge');
+                fill.style.borderColor = color;
+                fill.style.borderBottomColor = 'transparent';
+                fill.style.borderRightColor = 'transparent';
+                
+                // Map 0-100 to 45deg to 225deg
+                const deg = 45 + (STATE.fng.value / 100) * 180;
+                fill.style.transform = `rotate(${deg}deg)`;
+                document.getElementById('fg-label').style.color = color;
+            },
+
+            renderHistory: () => {
+                const tbody = document.getElementById('history-body');
+                tbody.innerHTML = '';
+                if(!STATE.historyLog.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No history available. Run the AI Agent.</td></tr>';
+                    return;
+                }
+                STATE.historyLog.forEach(log => {
+                    const color = log.decision==='BUY'?'var(--green)':(log.decision==='SELL'?'var(--red)':'var(--yellow)');
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${log.time}</td>
+                        <td class="text-cyan">${log.coin}</td>
+                        <td>$${log.price.toLocaleString()}</td>
+                        <td style="color:${color}; font-weight:700;">${log.decision}</td>
+                        <td class="text-muted">${log.ts}</td>
+                        <td class="text-muted" style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${log.reason}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            renderPaperTrading: () => {
+                const sym = COINS[STATE.coin].sym;
+                document.getElementById('pt-usd').innerText = UTILS.formatCurrency(STATE.portfolio.usd);
+                document.getElementById('pt-coin-lbl').innerText = sym;
+                
+                const holdings = STATE.portfolio.holdings[sym] || 0;
+                document.getElementById('pt-coin').innerText = holdings.toFixed(4);
+                
+                // Calculate total across all holdings
+                let totalHoldingsValue = 0;
+                // For simplicity in this demo, we estimate total value based on current viewed coin if holding it,
+                // but accurate requires fetching all prices. We'll show total based on current coin price.
+                const val = (holdings * STATE.marketData.currentPrice) + STATE.portfolio.usd;
+                
+                // Actually calculate real total by assuming non-viewed holdings value haven't changed much, or just showing viewed + USD.
+                // To be exact without extra API calls, we just display USD + current coin holding value.
+                document.getElementById('pt-total').innerText = UTILS.formatCurrency(val);
+                
+                const pnl = val - 10000;
+                const pnlEl = document.getElementById('pt-pnl');
+                pnlEl.innerText = (pnl>=0?'+':'') + UTILS.formatCurrency(pnl);
+                pnlEl.className = `pt-val ${pnl>=0?'text-green':'text-red'}`;
+            },
+
+            toggleSettings: () => {
+                const d = document.getElementById('settings-drawer');
+                const o = document.getElementById('overlay');
+                d.classList.toggle('open');
+                o.classList.toggle('open');
+            },
+            
+            toggleSound: () => {
+                STATE.sound = !STATE.sound;
+                localStorage.setItem('nexus_sound', STATE.sound);
+                const icon = document.getElementById('sound-icon');
+                if(STATE.sound) {
+                    icon.setAttribute('data-lucide', 'volume-2');
+                    UTILS.playSound('BEEP');
+                } else {
+                    icon.setAttribute('data-lucide', 'volume-x');
+                }
+                lucide.createIcons();
+            }
+        };
+
+        // Bootstrap
+        document.addEventListener('DOMContentLoaded', UI.init);
+    </script>
+</body>
+</html>
